@@ -274,7 +274,7 @@ dans les vues : tout passe par `L10n.t("clé")`, dont la table vit dans
 
 ## Licence
 
-Distribué sous licence **MIT**, © 2026 Bodyroro. L'utilisation, la modification et
+Distribué sous licence **MIT**, © 2026 BodyCorp. L'utilisation, la modification et
 la redistribution sont libres, sources comprises. Le texte complet se trouve dans
 [`LICENSE`](LICENSE).
 
@@ -525,7 +525,7 @@ everything goes through `L10n.t("key")`, whose table lives in
 
 ## Licence
 
-Distributed under the **MIT** licence, © 2026 Bodyroro. Use, modification and
+Distributed under the **MIT** licence, © 2026 BodyCorp. Use, modification and
 redistribution are free, sources included. The full text is available in
 [`LICENSE`](LICENSE).
 

@@ -2,7 +2,7 @@
 //  DNSProvider.swift · Modèle d'un résolveur DNS public
 //
 //  Un « fournisseur » ici = une variante précise d'un éditeur (AdGuard Familial,
-//  Cloudflare 1.1.1.3…), car c'est la variante — pas l'éditeur — qui détermine
+//  Cloudflare 1.1.1.3…), car c'est la variante, pas l'éditeur, qui détermine
 //  ce qui est réellement bloqué.
 //
 
@@ -139,20 +139,9 @@ struct DNSProvider: Identifiable, Hashable {
     /// l'interface l'affiche explicitement.
     let verifiedOn: String?
 
-    var displayName: String { "\(vendor) — \(variant.current)" }
+    var displayName: String { "\(vendor) - \(variant.current)" }
 
     var isVerified: Bool { verifiedOn != nil }
-
-    var countryName: String { Country.name(country).current }
-
-    /// Transports réellement proposés par ce fournisseur.
-    var transports: [DNSTransport] {
-        var t: [DNSTransport] = []
-        if !ipv4.isEmpty || !ipv6.isEmpty { t.append(.plain) }
-        if doh != nil { t.append(.https) }
-        if dot != nil { t.append(.tls) }
-        return t
-    }
 
     /// Adresses à écrire via `networksetup` : IPv4 puis IPv6.
     var plainAddresses: [String] { ipv4 + ipv6 }

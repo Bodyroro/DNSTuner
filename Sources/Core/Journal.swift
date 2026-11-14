@@ -3,7 +3,7 @@
 //
 //  Toute action qui touche à la configuration du système y est tracée, avec son
 //  résultat : c'est ce qui permet de comprendre après coup pourquoi la résolution
-//  DNS a changé. Aucune donnée personnelle n'y est écrite — uniquement des noms
+//  DNS a changé. Aucune donnée personnelle n'y est écrite : uniquement des noms
 //  de services réseau et des adresses de résolveurs publics.
 //
 

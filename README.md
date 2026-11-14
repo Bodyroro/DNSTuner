@@ -13,7 +13,7 @@
 ![Chip](https://img.shields.io/badge/Apple_Silicon-only-blue)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-orange?logo=swift)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Langues](https://img.shields.io/badge/langues-FR_·_EN-lightgrey)
+![Langues](https://img.shields.io/badge/langues-45-lightgrey)
 
 <br/>
 
@@ -267,10 +267,10 @@ dns0.eu KIDS et CIRA Famille.
 
 ## Langues
 
-L'interface existe intégralement en français et en anglais, avec un changement
-immédiat depuis les Réglages, sans redémarrage. Aucune chaîne n'est écrite en dur
-dans les vues : tout passe par `L10n.t("clé")`, dont la table vit dans
-`Sources/Strings.swift`.
+L'interface existe en 45 langues, avec un changement immédiat depuis les Réglages,
+sans redémarrage. Aucune chaîne n'est écrite en dur dans les vues : tout passe par
+`L10n.t("clé")`. Le français et l'anglais vivent dans `Sources/Strings.swift`, les
+43 autres langues dans `Langues/<code>.json`.
 
 ## Licence
 
@@ -518,10 +518,10 @@ dns0.eu KIDS and CIRA Family.
 
 ## Languages
 
-The interface is available in full in French and English, with an immediate switch
-from Settings and no restart required. No string is hard coded in the views:
-everything goes through `L10n.t("key")`, whose table lives in
-`Sources/Strings.swift`.
+The interface is available in 45 languages, with an immediate switch from Settings
+and no restart required. No string is hard coded in the views: everything goes
+through `L10n.t("key")`. French and English live in `Sources/Strings.swift`, the 43
+other languages in `Langues/<code>.json`.
 
 ## Licence
 
@@ -541,7 +541,7 @@ understanding of what it does. It is provided without warranty of any kind.
 
 <div align="center">
 
-Créé par **Rodolphe Vandaele** &nbsp;·&nbsp; [bodyroro.github.io](https://bodyroro.github.io) &nbsp;·&nbsp; [github.com/Bodyroro/DNSTuner](https://github.com/Bodyroro/DNSTuner)
+Créé par **Rodolphe Vandaele** &nbsp;·&nbsp; [bodycorp.fr](https://bodycorp.fr) &nbsp;·&nbsp; [github.com/Bodyroro/DNSTuner](https://github.com/Bodyroro/DNSTuner)
 
 *Conçu pour macOS 26 et 27 sur Apple Silicon &nbsp;·&nbsp; Built for macOS 26 and 27 on Apple Silicon*
 

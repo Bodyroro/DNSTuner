@@ -3,7 +3,7 @@
 //
 //  macOS n'expose le DNS chiffré système-wide que de deux façons :
 //   1. NEDNSSettingsManager, qui exige l'entitlement `dns-settings` (donc un
-//      profil de provisioning Apple payant) — inaccessible à une app signée ad-hoc ;
+//      profil de provisioning Apple payant) : inaccessible à une app signée ad-hoc ;
 //   2. un profil de configuration portant une charge utile
 //      `com.apple.dnsSettings.managed`.
 //  DNSTuner emprunte la seconde voie et génère le profil à la volée.
@@ -42,13 +42,13 @@ enum ProfileBuilder {
 
         // Adresses de bootstrap : macOS doit pouvoir joindre le résolveur avant
         // d'avoir pu résoudre son propre nom d'hôte. Facultatif mais évite un
-        // démarrage lent — et indispensable si le DNS du routeur est injoignable.
+        // démarrage lent : et indispensable si le DNS du routeur est injoignable.
         if !provider.bootstrapAddresses.isEmpty {
             dnsSettings["ServerAddresses"] = provider.bootstrapAddresses
         }
 
         let payloadID = identifier(for: provider, transport: transport)
-        let displayName = "DNSTuner — \(provider.displayName) (\(transport == .https ? "DoH" : "DoT"))"
+        let displayName = "DNSTuner - \(provider.displayName) (\(transport == .https ? "DoH" : "DoT"))"
 
         let payload: [String: Any] = [
             "PayloadType": "com.apple.dnsSettings.managed",

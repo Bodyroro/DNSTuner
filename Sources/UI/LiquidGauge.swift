@@ -11,7 +11,7 @@ struct LiquidGauge: View {
     /// Remplissage, de 0 à 1.
     let value: Double
     let tint: Color
-    /// Texte au centre — la note.
+    /// Texte au centre : la note.
     let center: String
     /// Légende sous la note.
     let caption: String

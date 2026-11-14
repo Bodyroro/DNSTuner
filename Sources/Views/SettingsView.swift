@@ -134,7 +134,7 @@ struct SettingsView: View {
         TitledCard(title: l10n.t("settings.about"), systemImage: "info.circle") {
             VStack(spacing: 7) {
                 InfoRow(label: l10n.t("settings.version"),
-                        value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                        value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-")
                 InfoRow(label: l10n.t("settings.catalogVerified"),
                         value: ProviderCatalog.verificationDate)
                 InfoRow(label: l10n.t("settings.providerCount"),
@@ -143,9 +143,9 @@ struct SettingsView: View {
                 HStack {
                     TricoloreBar(width: 44)
                     Spacer()
-                    Link(destination: URL(string: "https://bodyroro.github.io/dnstuner.html")!) {
+                    Link(destination: URL(string: "https://bodycorp.fr/dnstuner/")!) {
                         HStack(spacing: 4) {
-                            Text("bodyroro.github.io")
+                            Text("bodycorp.fr")
                             Image(systemName: "arrow.up.right")
                         }
                         .font(.caption)

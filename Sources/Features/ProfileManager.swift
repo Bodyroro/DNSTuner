@@ -24,23 +24,51 @@ final class ProfileManager: ObservableObject {
 
     private let profilesTool = "/usr/bin/profiles"
     private var pollTask: Task<Void, Never>?
+    private var readGeneration = 0
+    /// Fichier du profil proposé, supprimé dès que l'attente se termine.
+    private var pendingFile: URL?
 
     init() { refresh() }
 
     // MARK: - Détection
 
+    /// Lecture des profils, hors du fil principal : `profiles show` et `profiles status`
+    /// sont lents, et l'interrogation se répète toutes les 2 s pendant l'attente.
+    private nonisolated static func readState(tool: String) -> (listed: Set<String>, systemHasProfiles: Bool) {
+        var listed: Set<String> = []
+        for line in Shell.run(tool, ["show"]).split(separator: "\n") {
+            guard let range = line.range(of: "profileIdentifier:") else { continue }
+            let id = line[range.upperBound...].trimmingCharacters(in: .whitespaces)
+            if id.hasPrefix(ProfileBuilder.identifierPrefix) { listed.insert(id) }
+        }
+        // `profiles status` répond pour l'ensemble du système, sans root.
+        let r = Shell.runResult(tool, ["status", "-type", "configuration"])
+        let hasProfiles = r.ok && !r.out.localizedCaseInsensitiveContains("no configuration profiles")
+        return (listed, hasProfiles)
+    }
+
+    func refresh() {
+        Task { await reload() }
+    }
+
     /// Relit les profils installés, sans jamais demander de privilège.
     ///
     /// Nos profils sont de portée système : `profiles show` ne les liste pas
-    /// sans être root. On croise donc deux sources — les identifiants confirmés
+    /// sans être root. On croise donc deux sources : les identifiants confirmés
     /// installés, mémorisés par l'app, et `profiles status`, qui sait dire sans
     /// élévation s'il reste au moins un profil sur la machine. Si la machine
     /// n'en a plus aucun, la mémoire est purgée : l'utilisateur a pu retirer le
     /// profil depuis Réglages Système, et l'app ne doit pas prétendre le contraire.
-    func refresh() {
-        var found = profilesListedForUser()
+    func reload() async {
+        let tool = profilesTool
+        readGeneration += 1
+        let generation = readGeneration
+        let state = await Task.detached(priority: .userInitiated) { Self.readState(tool: tool) }.value
+        // Une lecture plus ancienne qui finit après une plus récente est ignorée (sondage, retrait, rafraîchissement).
+        guard generation == readGeneration else { return }
+        var found = state.listed
 
-        if systemHasProfiles() {
+        if state.systemHasProfiles {
             found.formUnion(Store.installedProfileIDs)
             // Un profil apparu pendant l'attente est celui qu'on vient de proposer.
             if let pending = awaitingApproval { found.insert(pending) }
@@ -54,33 +82,9 @@ final class ProfileManager: ObservableObject {
 
         if let pending = awaitingApproval, found.contains(pending) {
             awaitingApproval = nil
+            removePendingFile()
             stopPolling()
         }
-    }
-
-    /// Profils DNSTuner visibles au niveau utilisateur. Vide en principe, mais
-    /// couvre le cas d'un profil resté d'une version antérieure de l'app.
-    private func profilesListedForUser() -> Set<String> {
-        let output = Shell.run(profilesTool, ["show"])
-        var found: Set<String> = []
-        for line in output.split(separator: "\n") {
-            guard let range = line.range(of: "profileIdentifier:") else { continue }
-            let id = line[range.upperBound...].trimmingCharacters(in: .whitespaces)
-            if id.hasPrefix(ProfileBuilder.identifierPrefix) { found.insert(id) }
-        }
-        return found
-    }
-
-    /// Vrai s'il reste au moins un profil de configuration sur la machine.
-    /// `profiles status` répond pour l'ensemble du système, sans root.
-    private func systemHasProfiles() -> Bool {
-        let r = Shell.runResult(profilesTool, ["status", "-type", "configuration"])
-        guard r.ok else { return false }
-        return !r.out.localizedCaseInsensitiveContains("no configuration profiles")
-    }
-
-    func isInstalled(_ provider: DNSProvider, transport: DNSTransport) -> Bool {
-        installed.contains(ProfileBuilder.identifier(for: provider, transport: transport))
     }
 
     /// Profil DNSTuner actif, s'il y en a un (un seul peut être pertinent à la fois).
@@ -101,12 +105,14 @@ final class ProfileManager: ObservableObject {
         let id = ProfileBuilder.identifier(for: provider, transport: transport)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(id).mobileconfig")
+        removePendingFile()
         do {
             try data.write(to: url, options: .atomic)
         } catch {
             lastError = error.localizedDescription
             return false
         }
+        pendingFile = url
 
         NSWorkspace.shared.open(url)
         awaitingApproval = id
@@ -128,11 +134,17 @@ final class ProfileManager: ObservableObject {
             for _ in 0..<60 {   // ~2 minutes, largement de quoi valider le profil
                 try? await Task.sleep(for: .seconds(2))
                 if Task.isCancelled { return }
-                self?.refresh()
+                await self?.reload()
                 if self?.awaitingApproval == nil { return }
             }
             self?.awaitingApproval = nil
+            self?.removePendingFile()
         }
+    }
+
+    private func removePendingFile() {
+        if let url = pendingFile { try? FileManager.default.removeItem(at: url) }
+        pendingFile = nil
     }
 
     private func stopPolling() {
@@ -143,16 +155,17 @@ final class ProfileManager: ObservableObject {
     /// Abandonne l'attente d'approbation (l'utilisateur a renoncé).
     func cancelPending() {
         awaitingApproval = nil
+        removePendingFile()
         stopPolling()
     }
 
     // MARK: - Suppression
 
-    /// Supprime un profil DNSTuner. Tente d'abord sans privilèges — un profil
-    /// installé au niveau utilisateur se retire sans mot de passe — puis via
+    /// Supprime un profil DNSTuner. Tente d'abord sans privilèges : un profil
+    /// installé au niveau utilisateur se retire sans mot de passe : puis via
     /// l'invite d'administration si nécessaire.
     @discardableResult
-    func remove(identifier id: String) -> Bool {
+    func remove(identifier id: String) async -> Bool {
         lastError = nil
         // Garde-fou : ne jamais retirer un profil qui n'est pas le nôtre.
         guard id.hasPrefix(ProfileBuilder.identifierPrefix) else {
@@ -160,15 +173,21 @@ final class ProfileManager: ObservableObject {
             return false
         }
 
-        let direct = Shell.runResult(profilesTool, ["remove", "-identifier", id])
+        let tool = profilesTool
+        // L'invite de mot de passe attend l'utilisateur : hors du fil principal.
+        let (direct, elevated) = await Task.detached(priority: .userInitiated) {
+            () -> (Shell.Result, Shell.Result?) in
+            let direct = Shell.runResult(tool, ["remove", "-identifier", id])
+            if direct.ok { return (direct, nil) }
+            return (direct, Shell.admin("\(tool) remove -identifier \(Shell.shellQuoted(id))"))
+        }.value
         if direct.ok {
-            finishRemoval(id)
+            await finishRemoval(id)
             return true
         }
-
-        let elevated = Shell.admin("\(profilesTool) remove -identifier \(Shell.shellQuoted(id))")
+        guard let elevated else { return false }
         if elevated.ok {
-            finishRemoval(id)
+            await finishRemoval(id)
             return true
         }
         if Shell.wasCancelled(elevated) {
@@ -177,21 +196,23 @@ final class ProfileManager: ObservableObject {
         }
         lastError = elevated.err.trimmingCharacters(in: .whitespacesAndNewlines)
         Journal.shared.log(.failure, T("journal.profileRemoveFailed", id))
-        refresh()
+        await reload()
         return false
     }
 
-    private func finishRemoval(_ id: String) {
+    private func finishRemoval(_ id: String) async {
         Store.installedProfileIDs.remove(id)
         Journal.shared.log(.success, T("journal.profileRemoved", id))
-        refresh()
+        await reload()
     }
 
     /// Supprime tous les profils posés par DNSTuner.
     @discardableResult
-    func removeAll() -> Bool {
+    func removeAll() async -> Bool {
         var allOK = true
-        for id in installed where !remove(identifier: id) { allOK = false }
+        for id in installed {
+            if await !remove(identifier: id) { allOK = false }
+        }
         return allOK
     }
 }

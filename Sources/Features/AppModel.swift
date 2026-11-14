@@ -50,10 +50,8 @@ final class AppModel: ObservableObject {
     let diagnostic = DiagnosticEngine()
     let audit = BlockingAudit()
 
-    // L'onglet ouvert est mémorisé d'une session à l'autre. DT_TAB le force,
-    // pour le débogage, comme MT_TAB dans MacTuner.
-    @Published var tab: AppTab = AppTab(rawValue:
-        ProcessInfo.processInfo.environment["DT_TAB"] ?? Store.lastTab ?? "") ?? .dashboard {
+    // L'onglet ouvert est mémorisé d'une session à l'autre.
+    @Published var tab: AppTab = AppTab(rawValue: Store.lastTab ?? "") ?? .dashboard {
         didSet { Store.lastTab = tab.rawValue }
     }
     @Published var selectedProviderID: String?
@@ -84,20 +82,26 @@ final class AppModel: ObservableObject {
     // MARK: - Actions
 
     func apply(_ provider: DNSProvider) {
-        if engine.apply(provider) {
-            Store.appliedProviderID = provider.id
-        } else if let error = engine.lastError {
-            alert = error
+        Task {
+            if await engine.apply(provider) {
+                Store.appliedProviderID = provider.id
+            } else if let error = engine.lastError {
+                alert = error
+            }
         }
-        refresh()
     }
 
     func restore() {
-        // Retour arrière complet : DNS clair d'origine *et* profil chiffré retiré,
-        // sinon le profil continuerait de primer sur la configuration restaurée.
-        if !profiles.installed.isEmpty { profiles.removeAll() }
-        if !engine.restore(), let error = engine.lastError { alert = error }
-        refresh()
+        Task {
+            // Retour arrière complet : DNS clair d'origine *et* profil chiffré retiré,
+            // sinon le profil continuerait de primer sur la configuration restaurée.
+            // Retrait du profil refusé ou annulé : le retour arrière s'arrête là, sans seconde invite.
+            if !profiles.installed.isEmpty, await !profiles.removeAll() {
+                if let error = profiles.lastError { alert = error }
+                return
+            }
+            if await !engine.restore(), let error = engine.lastError { alert = error }
+        }
     }
 
     func install(_ provider: DNSProvider, transport: DNSTransport) {
@@ -107,8 +111,10 @@ final class AppModel: ObservableObject {
     }
 
     func removeProfile(_ id: String) {
-        if !profiles.remove(identifier: id), let error = profiles.lastError {
-            alert = error
+        Task {
+            if await !profiles.remove(identifier: id), let error = profiles.lastError {
+                alert = error
+            }
         }
     }
 

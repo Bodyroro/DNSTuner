@@ -88,7 +88,7 @@ enum NetworkServices {
     }
 
     /// Passerelle par défaut du réseau. Sert à savoir si le résolveur actif est
-    /// la box elle-même — le cas le plus fréquent quand aucun DNS n'est réglé.
+    /// la box elle-même : le cas le plus fréquent quand aucun DNS n'est réglé.
     static func defaultGateway() -> String? {
         let r = Shell.runResult("/sbin/route", ["-n", "get", "default"])
         guard r.ok else { return nil }
@@ -107,8 +107,8 @@ enum NetworkServices {
     /// Locale et non transmise : seul le nom du fabricant qu'on en déduit est affiché.
     /// Lecture passive et sans garantie : depuis macOS 15, la table ARP n'est
     /// visible que d'un processus autorisé à accéder au réseau local. DNSTuner
-    /// ne réclame pas cette autorisation — la déclencher pour un simple libellé
-    /// serait disproportionné — et se contente du renseignement quand il est là.
+    /// ne réclame pas cette autorisation : la déclencher pour un simple libellé
+    /// serait disproportionné : et se contente du renseignement quand il est là.
     static func macAddress(for ip: String) -> String? {
         arpLookup(ip)
     }
@@ -124,7 +124,7 @@ enum NetworkServices {
         return mac
     }
 
-    /// Vrai si l'adresse appartient à un réseau privé — donc à une box ou à un
+    /// Vrai si l'adresse appartient à un réseau privé : donc à une box ou à un
     /// résolveur local, pas à un service public.
     static func isPrivate(_ ip: String) -> Bool {
         if ip.hasPrefix("10.") || ip.hasPrefix("192.168.") || ip.hasPrefix("127.") { return true }

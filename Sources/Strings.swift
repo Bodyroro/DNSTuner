@@ -2,7 +2,7 @@
 //  Strings.swift · Table de traduction FR / EN
 //
 //  Toute chaîne visible par l'utilisateur vit ici. Ajouter une clé, c'est ajouter
-//  ses deux langues d'un coup — jamais l'une sans l'autre.
+//  ses deux langues d'un coup : jamais l'une sans l'autre.
 //
 
 import Foundation
@@ -46,6 +46,7 @@ enum Strings {
         "action.flush":        [.fr: "Vider le cache DNS", .en: "Flush DNS cache"],
         "action.save":         [.fr: "Enregistrer", .en: "Save"],
         "action.cancel":       [.fr: "Annuler", .en: "Cancel"],
+        "action.ok":           [.fr: "OK", .en: "OK"],
         "action.openSettings": [.fr: "Ouvrir Réglages Système", .en: "Open System Settings"],
         "action.clearLog":     [.fr: "Vider le journal", .en: "Clear log"],
         "alert.title":         [.fr: "Une action n'a pas abouti", .en: "An action did not complete"],
@@ -109,10 +110,10 @@ enum Strings {
         // MARK: Bandeau d'état
         "status.default":          [.fr: "DNS par défaut du réseau",
                                     .en: "Network default DNS"],
-        "status.applied":          [.fr: "%@ — en clair",
-                                    .en: "%@ — unencrypted"],
-        "status.encrypted":        [.fr: "%@ — chiffré",
-                                    .en: "%@ — encrypted"],
+        "status.applied":          [.fr: "%@ - en clair",
+                                    .en: "%@ - unencrypted"],
+        "status.encrypted":        [.fr: "%@ - chiffré",
+                                    .en: "%@ - encrypted"],
         "status.encryptedUnknown": [.fr: "Profil DNS chiffré actif",
                                     .en: "Encrypted DNS profile active"],
         "status.resolvers":        [.fr: "Résolveurs actifs : %@",
@@ -126,7 +127,7 @@ enum Strings {
                                    .en: "Read from scutil --dns: what the system actually uses."],
         "status.encryption":      [.fr: "Chiffrement", .en: "Encryption"],
         "status.encryptionOn":    [.fr: "Actif (profil DoH/DoT)", .en: "On (DoH/DoT profile)"],
-        "status.encryptionOff":   [.fr: "Aucun — requêtes en clair", .en: "None — queries in the clear"],
+        "status.encryptionOff":   [.fr: "Aucun : requêtes en clair", .en: "None: queries in the clear"],
         "status.servicesTitle":   [.fr: "Services réseau", .en: "Network services"],
         "status.servicesSubtitle":[.fr: "macOS règle le DNS par service : DNSTuner les configure tous.",
                                    .en: "macOS sets DNS per service: DNSTuner configures every one."],
@@ -209,8 +210,8 @@ enum Strings {
         "test.notTested":    [.fr: "Pas encore testé", .en: "Not tested yet"],
         "test.unreachable":  [.fr: "Résolveur injoignable depuis ce réseau",
                               .en: "Resolver unreachable from this network"],
-        "test.disclaimer":   [.fr: "Les tests interrogent directement les résolveurs et ne modifient rien sur votre Mac. Seuls des domaines témoins publics sont demandés — aucune donnée personnelle n'est transmise.",
-                              .en: "Tests query the resolvers directly and change nothing on your Mac. Only public canary domains are requested — no personal data is sent."],
+        "test.disclaimer":   [.fr: "Les tests interrogent directement les résolveurs et ne modifient rien sur votre Mac. Seuls des domaines témoins publics sont demandés : aucune donnée personnelle n'est transmise.",
+                              .en: "Tests query the resolvers directly and change nothing on your Mac. Only public canary domains are requested: no personal data is sent."],
 
         // MARK: Réglages
         "settings.language":        [.fr: "Langue", .en: "Language"],

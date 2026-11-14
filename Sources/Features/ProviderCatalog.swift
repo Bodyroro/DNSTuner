@@ -42,7 +42,6 @@ enum ProviderCatalog {
     static var vendorCount: Int { Set(all.map(\.vendor)).count }
     /// Nombre de pays représentés.
     static var countryCount: Int { Set(all.map(\.country)).count }
-    static var filteringCount: Int { all.filter(\.isFiltering).count }
     static var encryptedCount: Int { all.filter { $0.doh != nil || $0.dot != nil }.count }
 
     // MARK: - AdGuard DNS
@@ -97,7 +96,7 @@ enum ProviderCatalog {
         DNSProvider(
             id: "cloudflare-standard",
             vendor: "Cloudflare",
-            variant: LStr("1.1.1.1 — standard", "1.1.1.1 — standard"),
+            variant: LStr("1.1.1.1 - standard", "1.1.1.1 - standard"),
             summary: LStr("Résolveur rapide sans filtrage, orienté performance et vie privée.",
                           "Fast resolver with no filtering, focused on speed and privacy."),
             ipv4: ["1.1.1.1", "1.0.0.1"],
@@ -111,7 +110,7 @@ enum ProviderCatalog {
         DNSProvider(
             id: "cloudflare-security",
             vendor: "Cloudflare",
-            variant: LStr("1.1.1.2 — sécurité", "1.1.1.2 — security"),
+            variant: LStr("1.1.1.2 - sécurité", "1.1.1.2 - security"),
             summary: LStr("Bloque uniquement les domaines malveillants. Aucun blocage publicitaire.",
                           "Blocks malicious domains only. No ad blocking."),
             ipv4: ["1.1.1.2", "1.0.0.2"],
@@ -125,7 +124,7 @@ enum ProviderCatalog {
         DNSProvider(
             id: "cloudflare-family",
             vendor: "Cloudflare",
-            variant: LStr("1.1.1.3 — famille", "1.1.1.3 — family"),
+            variant: LStr("1.1.1.3 - famille", "1.1.1.3 - family"),
             summary: LStr("Domaines malveillants et contenu adulte. Aucun blocage publicitaire.",
                           "Malicious domains and adult content. No ad blocking."),
             ipv4: ["1.1.1.3", "1.0.0.3"],
@@ -215,7 +214,7 @@ enum ProviderCatalog {
             homepage: "https://opendns.com", verifiedOn: V),
     ]
 
-    // MARK: - Mullvad (chiffré uniquement — aucune adresse en clair publiée)
+    // MARK: - Mullvad (chiffré uniquement : aucune adresse en clair publiée)
 
     private static func mullvadEntry(_ id: String, _ host: String,
                                      _ variant: LStr, _ summary: LStr,
@@ -255,8 +254,8 @@ enum ProviderCatalog {
                      [.ads, .trackers, .malware, .adult, .gambling]),
         mullvadEntry("mullvad-all", "all.dns.mullvad.net",
                      LStr("Tout", "All"),
-                     LStr("Toutes les listes actives. Le plus strict — faux positifs probables.",
-                          "Every list enabled. The strictest — false positives likely."),
+                     LStr("Toutes les listes actives. Le plus strict - faux positifs probables.",
+                          "Every list enabled. The strictest : false positives likely."),
                      [.ads, .trackers, .malware, .adult, .gambling, .social]),
     ]
 

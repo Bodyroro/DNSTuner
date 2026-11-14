@@ -112,7 +112,7 @@ struct TestView: View {
     }
 
     private func latencyText(_ report: TestReport?) -> String {
-        guard let report else { return "—" }
+        guard let report else { return "-" }
         guard let ms = report.latencyMS else { return "✕" }
         return String(format: "%.0f ms", ms)
     }

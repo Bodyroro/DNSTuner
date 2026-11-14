@@ -27,8 +27,15 @@ enum Shell {
         p.standardOutput = out
         p.standardError = err
         do { try p.run() } catch { return Result(out: "", err: "\(error)", code: -1) }
+        // Les deux tubes se lisent en même temps : lus l'un après l'autre, une sortie
+        // d'erreur plus grosse que le tampon du tube bloquerait la commande et l'appelant.
+        let errRead = DispatchGroup()
+        nonisolated(unsafe) var errData = Data()
+        DispatchQueue.global().async(group: errRead) {
+            errData = err.fileHandleForReading.readDataToEndOfFile()
+        }
         let outData = out.fileHandleForReading.readDataToEndOfFile()
-        let errData = err.fileHandleForReading.readDataToEndOfFile()
+        errRead.wait()
         p.waitUntilExit()
         return Result(out: String(data: outData, encoding: .utf8) ?? "",
                       err: String(data: errData, encoding: .utf8) ?? "",

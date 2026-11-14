@@ -3,7 +3,7 @@
 //
 //  L'emoji drapeau d'Apple est un dessin ondulant avec ombre et coins arrondis :
 //  à petite taille il bavait et jurait avec le reste de l'interface. Ces drapeaux
-//  sont donc tracés à la main, en rectangle plein, sans bordure — même ratio 3:2
+//  sont donc tracés à la main, en rectangle plein, sans bordure : même ratio 3:2
 //  pour tous, parce qu'il s'agit d'un jeu d'icônes, pas d'une planche héraldique.
 //
 

@@ -121,7 +121,7 @@ struct DashboardView: View {
                 .font(.title2.weight(.semibold))
                 .contentTransition(.opacity)
             // Le détail complète le titre sans jamais le répéter : nom d'hôte
-            // s'il existe, puis l'adresse — affichée une seule fois.
+            // s'il existe, puis l'adresse : affichée une seule fois.
             Text(subtitle(for: identity))
                 .font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             Text(identity?.isLocal == false ? l10n.t("dash.unknownPublicHint")
@@ -164,7 +164,7 @@ struct DashboardView: View {
     }
 
     /// Note de protection : moitié pour le chiffrement, moitié pour l'étendue du
-    /// filtrage. Volontairement simple — c'est un repère, pas un score de sécurité.
+    /// filtrage. Volontairement simple : c'est un repère, pas un score de sécurité.
     private var protectionScore: Double {
         guard let provider = app.engine.appliedProvider ?? app.encryptedProvider else { return 0 }
         let encryption = app.isEncrypted ? 0.5 : 0.0
@@ -197,7 +197,7 @@ struct DashboardView: View {
                     .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
             }
             if app.engine.activeResolvers.isEmpty {
-                Text("—").font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                Text("-").font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
             }
         }
     }
@@ -208,7 +208,7 @@ struct DashboardView: View {
     }
 
     private var latencyText: String {
-        guard let ms = currentReport?.latencyMS else { return "—" }
+        guard let ms = currentReport?.latencyMS else { return "-" }
         return String(format: "%.0f ms", ms)
     }
 
@@ -383,7 +383,7 @@ struct DashboardView: View {
                     app.tab = .test
                 }
                 quickAction(l10n.t("action.flush"), icon: "arrow.clockwise") {
-                    _ = app.engine.flushCache()
+                    app.engine.flushCache()
                 }
                 quickAction(l10n.t("action.restore"), icon: "arrow.uturn.backward",
                             tint: DTColor.ambre, enabled: app.canRestore) {

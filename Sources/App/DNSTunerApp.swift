@@ -48,6 +48,9 @@ struct ContentView: View {
         .environmentObject(app)
         .frame(minWidth: 1180, minHeight: 720)
         .buttonStyle(DarkButton())
+        // Langue choisie dans l'app : sens d'écriture (arabe, hébreu, ourdou) et formats des nombres et dates.
+        .environment(\.layoutDirection, loc.lang.isRightToLeft ? .rightToLeft : .leftToRight)
+        .environment(\.locale, Locale(identifier: loc.lang.code))
         // Encre de nuit derrière la bande d'onglets et les en-têtes : sans ça,
         // ces zones affichent le gris système.
         .background(DTColor.nuit.ignoresSafeArea())
@@ -79,7 +82,7 @@ struct ContentView: View {
         .alert(loc.t("alert.title"),
                isPresented: Binding(get: { app.alert != nil },
                                     set: { if !$0 { app.alert = nil } })) {
-            Button("OK", role: .cancel) { app.alert = nil }
+            Button(loc.t("action.ok"), role: .cancel) { app.alert = nil }
         } message: {
             Text(app.alert ?? "")
         }

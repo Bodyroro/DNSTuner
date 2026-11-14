@@ -147,7 +147,7 @@ struct StatusView: View {
         TitledCard(title: l10n.t("status.actionsTitle"),
                    systemImage: "wrench.and.screwdriver") {
             HStack(spacing: 10) {
-                Button(l10n.t("action.flush")) { _ = app.engine.flushCache() }
+                Button(l10n.t("action.flush")) { app.engine.flushCache() }
                 Button(l10n.t("action.restore")) { app.restore() }
                     .buttonStyle(DarkButton(accent: DTColor.ambre))
                     .disabled(!app.canRestore)

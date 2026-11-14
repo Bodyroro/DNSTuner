@@ -559,38 +559,16 @@ struct FlowRow: Layout {
 
 // MARK: - Sélecteur de langue
 
-/// Choix de langue : deux pastilles drapeau + nom, la sélection remplie en accent.
+/// Choix de langue : menu des 45 langues, chacune sous son propre nom.
 struct LanguagePicker: View {
     @ObservedObject var loc: L10n
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(Lang.allCases) { l in
-                let selected = loc.lang == l
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { loc.set(l) }
-                } label: {
-                    HStack(spacing: 7) {
-                        FlagView(country: l == .fr ? "FR" : "GB", height: 13)
-                        Text(l.displayName).font(.callout.weight(.medium))
-                        if selected {
-                            Image(systemName: "checkmark.circle.fill").font(.caption)
-                        }
-                    }
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .frame(minWidth: 128)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(selected ? DTColor.mac : Color.white.opacity(0.06))
-                    )
-                    .foregroundStyle(selected ? DTColor.nuit : Color.primary)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(selected ? Color.clear : DTColor.ligne, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
+        Picker(loc.t("settings.language"), selection: Binding(get: { loc.lang }, set: { loc.set($0) })) {
+            ForEach(Lang.allCases) { Text($0.displayName).tag($0) }
         }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .fixedSize()
     }
 }
 

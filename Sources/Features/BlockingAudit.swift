@@ -3,7 +3,7 @@
 //
 //  Un test de bloqueur classique juge trois choses : le masquage cosmétique, le
 //  chargement des scripts, et la résolution des domaines. Un DNS n'agit que sur
-//  la troisième — il ne voit ni le contenu d'une page ni le chemin d'un script.
+//  la troisième : il ne voit ni le contenu d'une page ni le chemin d'un script.
 //  L'audit porte donc uniquement là-dessus, et le dit.
 //
 
@@ -64,7 +64,7 @@ struct AuditProbe: Identifiable {
 }
 
 enum ProbeVerdict: String {
-    case blocked      // NXDOMAIN, aucune réponse, ou adresse puits
+    case blocked      // NXDOMAIN, REFUSED, réponse vide, ou adresse puits
     case resolved     // le domaine répond normalement : rien ne le bloque
     case failed       // la mesure n'a pas abouti
 }
@@ -268,16 +268,31 @@ final class BlockingAudit: ObservableObject {
 
     private nonisolated static func measure(_ probe: AuditProbe, dig: String,
                                             sinkholes: Set<String>) async -> ProbeResult {
-        let short = Shell.runResult(dig, ["+short", probe.domain, "+time=3", "+tries=1"])
-        guard short.ok || !short.trimmedOut.isEmpty else {
+        let r = Shell.runResult(dig, [probe.domain, "A", "+time=3", "+tries=1", "+noall", "+comments", "+answer"])
+        // Délai dépassé (dig sort en 9), SERVFAIL ou statut absent : la mesure n'a pas abouti. Un `+short` ne
+        // distinguait rien de tout cela d'un blocage, et un résolveur lent passait pour un bon filtre.
+        guard r.ok, let status = r.out.firstMatch(of: #/status: ([A-Z]+)/#)?.1 else {
             return ProbeResult(probe: probe, verdict: .failed, answer: "")
         }
-        let ips = short.trimmedOut.split(separator: "\n").map(String.init)
+        switch status {
+        case "NXDOMAIN", "REFUSED":
+            return ProbeResult(probe: probe, verdict: .blocked, answer: String(status))
+        case "NOERROR":
+            break
+        default:
+            return ProbeResult(probe: probe, verdict: .failed, answer: String(status))
+        }
+        let ips = r.out.split(separator: "\n")
+            .filter { !$0.hasPrefix(";") }
+            .compactMap { ligne -> String? in
+                let champs = ligne.split(whereSeparator: \.isWhitespace)
+                return champs.count >= 5 && champs[3] == "A" ? String(champs[4]) : nil
+            }
             .filter { IPAddress.isValid($0) }
 
         if ips.isEmpty {
-            // Ni adresse ni erreur exploitable : le domaine est filtré.
-            return ProbeResult(probe: probe, verdict: .blocked, answer: "NXDOMAIN")
+            // Réponse NOERROR sans adresse : le résolveur a vidé la réponse.
+            return ProbeResult(probe: probe, verdict: .blocked, answer: "NODATA")
         }
         let sink: Set<String> = ["0.0.0.0", "127.0.0.1", "::", "::1"]
         if ips.allSatisfy({ sink.contains($0) || sinkholes.contains($0) }) {

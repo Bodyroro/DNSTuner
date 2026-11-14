@@ -35,7 +35,7 @@ struct AuditSection: View {
             HStack(alignment: .center, spacing: 22) {
                 LiquidGauge(value: audit.hasResults ? audit.score : 0,
                             tint: audit.hasResults ? audit.level.tint : .secondary,
-                            center: audit.hasResults ? "\(Int((audit.score * 100).rounded()))" : "—",
+                            center: audit.hasResults ? "\(Int((audit.score * 100).rounded()))" : "-",
                             caption: l10n.t("audit.outOf"),
                             size: 132,
                             animated: audit.isRunning || audit.hasResults)
@@ -189,7 +189,7 @@ struct AuditSection: View {
     }
 
     private func answerText(_ result: ProbeResult?) -> String {
-        guard let result else { return "—" }
+        guard let result else { return "-" }
         switch result.verdict {
         case .blocked:  return l10n.t("audit.verdict.blocked") + " · " + result.answer
         case .resolved: return result.answer
@@ -230,7 +230,7 @@ struct AuditSummaryCard: View {
             HStack(spacing: 16) {
                 LiquidGauge(value: audit.hasResults ? audit.score : 0,
                             tint: audit.hasResults ? audit.level.tint : .secondary,
-                            center: audit.hasResults ? "\(Int((audit.score * 100).rounded()))" : "—",
+                            center: audit.hasResults ? "\(Int((audit.score * 100).rounded()))" : "-",
                             caption: l10n.t("audit.outOf"),
                             size: 84,
                             animated: audit.isRunning || audit.hasResults)

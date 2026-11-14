@@ -3,7 +3,7 @@
 //
 //  Le tableau comparatif des fournisseurs annonce ce qu'ils *disent* bloquer.
 //  Ce fichier vérifie ce qu'ils bloquent *vraiment*, en interrogeant directement
-//  le résolveur — sans changer la configuration du système.
+//  le résolveur : sans changer la configuration du système.
 //
 //  Deux chemins d'interrogation :
 //   • `dig` pour les résolveurs joignables en clair ;
@@ -42,11 +42,10 @@ enum DNSMessage {
     struct Response {
         let rcode: UInt8
         let addresses: [String]
-        var isNXDomain: Bool { rcode == 3 }
     }
 
     /// Lit le code de retour et les adresses A. Renvoie `nil` si le message est
-    /// tronqué ou malformé — jamais d'interprétation optimiste.
+    /// tronqué ou malformé : jamais d'interprétation optimiste.
     static func parse(_ data: Data) -> Response? {
         let b = [UInt8](data)
         guard b.count >= 12 else { return nil }
@@ -204,6 +203,10 @@ final class DNSTester: ObservableObject {
     private func measureLatency(_ provider: DNSProvider, transport: DNSTransport) async -> Double? {
         var samples: [Double] = []
         for _ in 0..<3 {
+            if transport == .plain {
+                if let ms = digQueryTime(provider) { samples.append(ms) }
+                continue
+            }
             let start = Date()
             let outcome = await query(BlockProbe.latencyProbe, provider: provider, transport: transport)
             if case .failed = outcome { continue }
@@ -211,6 +214,14 @@ final class DNSTester: ObservableObject {
         }
         guard !samples.isEmpty else { return nil }
         return samples.sorted()[samples.count / 2]
+    }
+
+    /// Temps de requête mesuré par `dig` lui-même : chronométrer le processus y ajoutait son lancement.
+    private func digQueryTime(_ provider: DNSProvider) -> Double? {
+        guard let server = provider.ipv4.first ?? provider.ipv6.first else { return nil }
+        let r = Shell.runResult(dig, ["@\(server)", BlockProbe.latencyProbe, "A", "+time=3", "+tries=1", "+noall", "+stats"])
+        guard r.ok, let match = r.out.firstMatch(of: #/Query time: (\d+) msec/#) else { return nil }
+        return Double(match.1)
     }
 
     // MARK: - Interrogation
@@ -237,7 +248,8 @@ final class DNSTester: ObservableObject {
                                       "+time=3", "+tries=1", "+noall", "+answer", "+comments"])
         guard r.ok else { return .failed(r.err) }
         let out = r.out
-        if out.contains("status: NXDOMAIN") { return .blocked }
+        if out.contains("status: NXDOMAIN") || out.contains("status: REFUSED") { return .blocked }
+        if out.contains("status: SERVFAIL") { return .failed("SERVFAIL") }
         if out.contains("connection timed out") || out.contains("no servers could be reached") {
             return .failed("timeout")
         }
@@ -266,7 +278,12 @@ final class DNSTester: ObservableObject {
                 return .failed("HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
             }
             guard let parsed = DNSMessage.parse(data) else { return .failed("malformed") }
-            if parsed.isNXDomain { return .blocked }
+            // 3 NXDOMAIN et 5 REFUSED : refus de résoudre ; tout autre code d'erreur (2 SERVFAIL...) : mesure ratée.
+            switch parsed.rcode {
+            case 3, 5: return .blocked
+            case 0: break
+            default: return .failed("rcode \(parsed.rcode)")
+            }
             return classify(parsed.addresses)
         } catch {
             return .failed(error.localizedDescription)

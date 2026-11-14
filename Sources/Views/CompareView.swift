@@ -1,8 +1,8 @@
 //
 //  CompareView.swift · Matrice « que bloque quoi »
 //
-//  Deux lectures superposées : ce que le fournisseur annonce, et — dès qu'un test
-//  a été lancé depuis l'onglet Test — ce qu'il bloque réellement.
+//  Deux lectures superposées : ce que le fournisseur annonce, et : dès qu'un test
+//  a été lancé depuis l'onglet Test : ce qu'il bloque réellement.
 //
 
 import SwiftUI
@@ -169,7 +169,7 @@ struct CompareView: View {
     }
 
     private func latencyText(_ provider: DNSProvider) -> String {
-        guard let report = app.tester.reports[provider.id] else { return "—" }
+        guard let report = app.tester.reports[provider.id] else { return "-" }
         guard let ms = report.latencyMS else { return l10n.t("compare.unreachable") }
         return String(format: "%.0f ms", ms)
     }

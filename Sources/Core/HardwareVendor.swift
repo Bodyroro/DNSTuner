@@ -4,7 +4,7 @@
 //  Quand le résolveur actif est la passerelle du réseau, il n'a en général ni
 //  nom d'hôte ni enregistrement PTR : « 192.168.1.254 » ne dit rien à personne.
 //  Son adresse matérielle, elle, porte un préfixe constructeur (OUI) attribué
-//  par l'IEEE — c'est ce qui permet d'afficher « Freebox » ou « Sagemcom ».
+//  par l'IEEE : c'est ce qui permet d'afficher « Freebox » ou « Sagemcom ».
 //
 //  Tout est local : l'adresse matérielle est lue dans la table ARP du Mac et
 //  n'est jamais transmise, ni journalisée. Seul le nom du fabricant est affiché.
@@ -12,7 +12,7 @@
 //  Table extraite du registre public de l'IEEE (standards-oui.ieee.org), le
 //  2026-07-26. Elle couvre les fabricants de box d'opérateur et de routeurs
 //  grand public ; les généralistes aux milliers de préfixes (Apple, Cisco,
-//  Huawei, Xiaomi) en sont exclus — ils n'apportent rien pour une passerelle.
+//  Huawei, Xiaomi) en sont exclus : ils n'apportent rien pour une passerelle.
 //
 
 import Foundation

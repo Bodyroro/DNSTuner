@@ -2,7 +2,7 @@
 //  DNSEngine.swift · Application du DNS système (transport en clair)
 //
 //  macOS règle le DNS *par service réseau*. Pour un effet réellement système,
-//  DNSTuner écrit sur tous les services activés — mais en une seule élévation de
+//  DNSTuner écrit sur tous les services activés : mais en une seule élévation de
 //  privilèges : toutes les commandes `networksetup` sont concaténées en un unique
 //  script passé à `Shell.admin`, donc une seule demande de mot de passe.
 //
@@ -20,7 +20,7 @@ struct ResolverIdentity: Equatable {
     /// réseau local. Beaucoup de box ne répondent à aucun PTR : c'est souvent
     /// la seule façon de leur donner un nom.
     let vendor: String?
-    /// Vrai si l'adresse est privée — donc une box ou un résolveur local.
+    /// Vrai si l'adresse est privée : donc une box ou un résolveur local.
     let isLocal: Bool
     /// Vrai si le résolveur est la passerelle par défaut du réseau.
     let isGateway: Bool
@@ -68,16 +68,37 @@ final class DNSEngine: ObservableObject {
 
     private let networksetup = "/usr/sbin/networksetup"
 
+    /// Numéro de la dernière lecture lancée : une lecture plus ancienne qui finit
+    /// après une plus récente est ignorée.
+    private var readGeneration = 0
+
     init() { refresh() }
 
     // MARK: - Lecture d'état
 
-    func refresh() {
-        services = NetworkServices.configurable()
-        activeResolvers = NetworkServices.activeResolvers()
+    /// Lecture de l'état réseau, hors du fil principal : une dizaine de commandes
+    /// (`networksetup`, `ifconfig`, `scutil`) dont aucune ne doit figer l'interface.
+    private nonisolated static func readState() -> (services: [NetworkService], resolvers: [String],
+                                                    declared: [String: [String]]) {
+        let services = NetworkServices.configurable()
         var declared: [String: [String]] = [:]
         for s in services { declared[s.name] = NetworkServices.dnsServers(for: s.name) }
-        declaredDNS = declared
+        return (services, NetworkServices.activeResolvers(), declared)
+    }
+
+    func refresh() {
+        Task { await reload() }
+    }
+
+    /// Relit l'état et le publie ; les appelants qui ont besoin du résultat l'attendent.
+    func reload() async {
+        readGeneration += 1
+        let generation = readGeneration
+        let state = await Task.detached(priority: .userInitiated) { Self.readState() }.value
+        guard generation == readGeneration else { return }
+        services = state.services
+        activeResolvers = state.resolvers
+        declaredDNS = state.declared
         appliedProvider = detectAppliedProvider()
         identifyResolver()
     }
@@ -130,17 +151,12 @@ final class DNSEngine: ObservableObject {
         }
     }
 
-    /// Vrai si au moins un service utilise encore le DNS fourni par le routeur.
-    var usesDHCPDNS: Bool {
-        services.contains { (declaredDNS[$0.name] ?? []).isEmpty }
-    }
-
     // MARK: - Application
 
     /// Applique les serveurs d'un fournisseur à tous les services configurables.
     /// Renvoie `false` si l'utilisateur a annulé ou si la commande a échoué.
     @discardableResult
-    func apply(_ provider: DNSProvider) -> Bool {
+    func apply(_ provider: DNSProvider) async -> Bool {
         let addresses = provider.plainAddresses
         guard !addresses.isEmpty else {
             lastError = T("error.noPlainAddress")
@@ -164,11 +180,11 @@ final class DNSEngine: ObservableObject {
         let commands = services.map { service in
             "\(networksetup) -setdnsservers \(Shell.shellQuoted(service.name)) \(quotedAddresses)"
         }
-        let ok = runPrivileged(commands + [flushCommands],
-                               success: T("journal.applied", provider.displayName),
-                               failure: T("journal.applyFailed", provider.displayName))
+        let ok = await runPrivileged(commands + [flushCommands],
+                                     success: T("journal.applied", provider.displayName),
+                                     failure: T("journal.applyFailed", provider.displayName))
         if ok { Store.appliedProviderID = provider.id }
-        refresh()
+        await reload()
         return ok
     }
 
@@ -176,7 +192,7 @@ final class DNSEngine: ObservableObject {
     /// Un service qui n'avait aucun DNS déclaré repasse en `Empty`, c'est-à-dire
     /// au serveur fourni par le routeur via DHCP.
     @discardableResult
-    func restore() -> Bool {
+    func restore() async -> Bool {
         guard !services.isEmpty else {
             lastError = T("error.noService")
             return false
@@ -188,23 +204,25 @@ final class DNSEngine: ObservableObject {
                                       : saved.map { Shell.shellQuoted($0) }.joined(separator: " ")
             return "\(networksetup) -setdnsservers \(Shell.shellQuoted(service.name)) \(value)"
         }
-        let ok = runPrivileged(commands + [flushCommands],
-                               success: T("journal.restored"),
-                               failure: T("journal.restoreFailed"))
+        let ok = await runPrivileged(commands + [flushCommands],
+                                     success: T("journal.restored"),
+                                     failure: T("journal.restoreFailed"))
         if ok {
             Store.clearOriginal()
             Store.appliedProviderID = nil
         }
-        refresh()
+        await reload()
         return ok
     }
 
     /// Vide le cache de résolution sans rien reconfigurer.
-    @discardableResult
-    func flushCache() -> Bool {
-        runPrivileged([flushCommands],
-                      success: T("journal.flushed"),
-                      failure: T("journal.flushFailed"))
+    func flushCache() {
+        guard !busy else { return }
+        Task {
+            await runPrivileged([flushCommands],
+                                success: T("journal.flushed"),
+                                failure: T("journal.flushFailed"))
+        }
     }
 
     /// `dscacheutil -flushcache` vide le cache, mais seul le signal HUP à
@@ -215,13 +233,18 @@ final class DNSEngine: ObservableObject {
 
     // MARK: - Exécution privilégiée
 
-    /// Exécute toutes les commandes en une seule invite de mot de passe.
-    private func runPrivileged(_ commands: [String], success: String, failure: String) -> Bool {
+    /// Exécute toutes les commandes en une seule invite de mot de passe. L'invite
+    /// et les commandes tournent hors du fil principal ; `busy` reste visible.
+    @discardableResult
+    private func runPrivileged(_ commands: [String], success: String, failure: String) async -> Bool {
         busy = true
         defer { busy = false }
         lastError = nil
 
-        let result = Shell.admin(commands.joined(separator: " ; "))
+        // Le code de sortie est celui de la première commande en échec : un `networksetup` refusé n'est plus masqué par la
+        // réussite du rafraîchissement du cache qui le suit.
+        let script = "rc=0; " + commands.map { "\($0) || rc=$?" }.joined(separator: "; ") + "; exit $rc"
+        let result = await Task.detached(priority: .userInitiated) { Shell.admin(script) }.value
         if result.ok {
             Journal.shared.log(.success, success)
             return true
@@ -231,7 +254,7 @@ final class DNSEngine: ObservableObject {
             return false
         }
         lastError = result.err.trimmingCharacters(in: .whitespacesAndNewlines)
-        Journal.shared.log(.failure, "\(failure) — \(lastError ?? "")")
+        Journal.shared.log(.failure, "\(failure) : \(lastError ?? "")")
         return false
     }
 }
